@@ -1992,6 +1992,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       }
     }
 
+
+    // 预处理完毕之后开始执行
     // 5. unknown sequence
     // [i ... e1 + 1]: a b [c d e] f g
     // [i ... e2 + 1]: a b [e d c h] f g
@@ -1999,9 +2001,9 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     else {
       const s1 = i // prev starting index
       const s2 = i // next starting index
-
-      // 5.1 build key:index map for newChildren
+      // 建立索引表
       const keyToNewIndexMap: Map<string | number | symbol, number> = new Map()
+      // 遍历新的一组子节点
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
@@ -2014,35 +2016,46 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
               `Make sure keys are unique.`
             )
           }
-          keyToNewIndexMap.set(nextChild.key, i)
+          keyToNewIndexMap.set(nextChild.key, i) // { key(节点的key)：index(节点的索引) }
         }
       }
 
       // 5.2 loop through old children left to be patched and try to patch
       // matching nodes & remove nodes that are no longer present
       let j
+      // 记录新的一组子节点中已处理的节点数
       let patched = 0
-      const toBePatched = e2 - s2 + 1
-      let moved = false
-      // used to track whether any node has moved
+      // 记录需要更新的节点数，实际上就是经过预处理后，新子节点数组中剩余节点的数量
+      const toBePatched = e2 - s2 + 1 
+      // 表示是否需要移动节点
+      let moved = false 
+      // 初始值为 0，代表遍历旧的一组子节点的过程中遇到的最大索引值 k
       let maxNewIndexSoFar = 0
       // works as Map<newIndex, oldIndex>
       // Note that oldIndex is offset by +1
       // and oldIndex = 0 is a special value indicating the new node has
       // no corresponding old node.
       // used for determining longest stable subsequence
-      const newIndexToOldIndexMap = new Array(toBePatched)
+
+      //  source 数组将用来存储新的一组子节点中的节点在旧的一组子节点中的位置索引，后面将会使用它计算出一个最长递增子序列，并用于辅助完成 DOM 移动的操作
+      const newIndexToOldIndexMap = new Array(toBePatched) // 默认为 0
       for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
 
+      // 遍历旧的一组子节点中剩余未处理的节点
       for (i = s1; i <= e1; i++) {
+        // 获取旧子节点
         const prevChild = c1[i]
+        // 如果更新过的节点数量大于等于需要更新的节点数量，则执行卸载
+        // 其实很好理解，也就是说，我当前新子节点数组剩余的节点数假设有4个需要patch，现在都更新完了，那说明旧节点数组剩余的节点就是多余的，直接卸载就好了
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
           unmount(prevChild, parentComponent, parentSuspense, true)
           continue
         }
         let newIndex
+        // 判断旧子节点中是否含有 key 属性
         if (prevChild.key != null) {
+          // 如果旧的子节点有 key 属性，那么就可以用这个key去索引表中取出当前旧节点在新子节点数组中的索引    
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
           // key-less node, try to locate a key-less node of the same type
@@ -2056,15 +2069,21 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             }
           }
         }
+        // 如果旧节点不存在于新子节点数组中，那么卸载
         if (newIndex === undefined) {
           unmount(prevChild, parentComponent, parentSuspense, true)
-        } else {
-          newIndexToOldIndexMap[newIndex - s2] = i + 1
+        } 
+        // 如果旧节点存在于新子节点数组中
+        else {
+          // 存储新的一组子节点中的节点在旧的一组子节点中的位置索引
+          newIndexToOldIndexMap[newIndex - s2] = i + 1 
+          // 判断节点是否需要移动，和简单diff算法一样，通过最大索引来判断
           if (newIndex >= maxNewIndexSoFar) {
             maxNewIndexSoFar = newIndex
           } else {
             moved = true
           }
+          // 打补丁
           patch(
             prevChild,
             c2[newIndex] as VNode,
@@ -2076,6 +2095,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             slotScopeIds,
             optimized
           )
+          // 记录已经打过补丁的节点数，我们知道，已经更新过的节点数量应该小于新的一组子节点中需要更新的节点数量。
+          // 一旦前者超过后者，则说明有多余的节点，我们应该将它们卸载
           patched++
         }
       }
