@@ -612,6 +612,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
   }
 
+  // 移动静态节点
   const moveStaticNode = (
     { el, anchor }: VNode,
     container: RendererElement,
@@ -1876,6 +1877,16 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
   }
 
+
+  /**
+   *  快速diff算法
+   *  1.预处理，两端往中间比较key，直到两端的key都对不上
+   *  2.生成一个source数组，当中存储的是新子节点数组经过预处理后的剩余节点在旧子节点数组中的索引
+   *  3.根据source数组中存储的索引值，生成一个最长递增子序列数组seq，seq存储的是最长递增子序列在source数组中的下标（实际表示的就是不需要移动的节点的下标），可以是不连续的
+   *  做到这一步的时候，已经patch过了，也就是说真实dom的内容已经更新成新的vnode的内容了，就差移动和需要进行挂载的节点   了
+   *  4.从后往前遍历source数组以及seq数组，假设用j表示source最后一个元素下标，i表示seq最后一个元素下标，如果source[j]值为0表示挂载 j--，如果seq[i] !== j 则表示移动 i-- j--，移动方式和挂载方式实际上都是一样的将对应的节点插入到后一个节点的前面
+   */
+
   // can be all-keyed or mixed
   // key 属性就像虚拟节点的“身份证”号，只要两个虚拟节点的 type属性值和 key 属性值都相同，那么我们就认为它们是相同的，即可以进行 DOM 的复用
   const patchKeyedChildren = (
@@ -2031,12 +2042,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       let moved = false 
       // 初始值为 0，代表遍历旧的一组子节点的过程中遇到的最大索引值 k
       let maxNewIndexSoFar = 0
-      // works as Map<newIndex, oldIndex>
-      // Note that oldIndex is offset by +1
-      // and oldIndex = 0 is a special value indicating the new node has
-      // no corresponding old node.
-      // used for determining longest stable subsequence
-
       //  source 数组将用来存储新的一组子节点中的节点在旧的一组子节点中的位置索引，后面将会使用它计算出一个最长递增子序列，并用于辅助完成 DOM 移动的操作
       const newIndexToOldIndexMap = new Array(toBePatched) // 默认为 0
       for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
@@ -2046,7 +2051,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         // 获取旧子节点
         const prevChild = c1[i]
         // 如果更新过的节点数量大于等于需要更新的节点数量，则执行卸载
-        // 其实很好理解，也就是说，我当前新子节点数组剩余的节点数假设有4个需要patch，现在都更新完了，那说明旧节点数组剩余的节点就是多余的，直接卸载就好了
+        // 其实很好理解，也就是说，当前新子节点数组剩余的节点数假设有4个需要patch，现在都更新完了，那说明旧节点数组剩余的节点就是多余的，直接卸载就好了
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
           unmount(prevChild, parentComponent, parentSuspense, true)
@@ -2101,18 +2106,28 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         }
       }
 
+
+      // 上面else语句当中的操作都是卸载和更新，接下来就是移动和挂载
+
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
-      const increasingNewIndexSequence = moved
-        ? getSequence(newIndexToOldIndexMap)
-        : EMPTY_ARR
+      // 获取最长递增子序列中的元素在 source 数组中的位置索引，比如 [2,3,1,-1] 返回 [0,1]
+      // 它的含义是：在新的一组子节点中，重新编号后索引值为 0 和 1 的这两个节点在更新前后顺序没有发生变
+      // 化。换句话说，重新编号后，索引值为 0 和 1 的节点不需要移动，那么在比较索引的时候，不是当中的索引所对应的节点就需要移动
+      const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : EMPTY_ARR
+      // j指向最长递增子序列中的最后一个元素。
       j = increasingNewIndexSequence.length - 1
       // looping backwards so that we can use last patched node as anchor
+      // i指向新的一组子节点中经过预处理后剩余子节点的最后一个节点，注意这里索引的起点0是除去经过预处理之后的剩余子节点的第一个开始
+      // i = toBePatched - 1实际上就是source数组的最后一个元素的索引,这里从后往前遍历source
       for (i = toBePatched - 1; i >= 0; i--) {
-        const nextIndex = s2 + i
+        // 该节点在新 children 中的真实位置索引
+        const nextIndex = s2 + i 
+        // 获取该节点
         const nextChild = c2[nextIndex] as VNode
-        const anchor =
-          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+        // 获取锚点，锚点是当前节点的后一个节点
+        const anchor = nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+        // 如果访问source的值是0，说明是新增的节点，直接挂载
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
@@ -2127,12 +2142,14 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             optimized
           )
         } else if (moved) {
-          // move if:
-          // There is no stable subsequence (e.g. a reverse)
-          // OR current node is not among the stable sequence
+          // 否则进行移动
+          // increasingNewIndexSequence[j]保存的是最长子序列在source数组中的索引值，如果比较发现当前节点的索引不在最长子序列中，表示需要移动
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
+            // 移动的逻辑和挂载其实一样的，就是将当前节点插入到后一个节点的前面
             move(nextChild, container, anchor, MoveType.REORDER)
           } else {
+            // 当 i == increasingNewIndexSequence[j] 时，说明该位置的节点不需要移动
+            // 只需要让 s 指向下一个位置
             j--
           }
         }
@@ -2140,6 +2157,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
   }
 
+  // 移动元素
   const move: MoveFn = (
     vnode,
     container,
@@ -2163,7 +2181,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       return
     }
 
-    if (type === Fragment) {
+    // 因为Fragment本身并不属于某一个实际的节点，而是对一组节点的描述，因此需要移动的是他的子节点，就和挂载一样，挂载的也是它的子节点，而不是Fragment节点本身
+    if (type === Fragment) { 
       hostInsert(el!, container, anchor)
       for (let i = 0; i < (children as VNode[]).length; i++) {
         move((children as VNode[])[i], container, anchor, moveType)
@@ -2172,16 +2191,18 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       return
     }
 
+    // 静态节点移动
     if (type === Static) {
       moveStaticNode(vnode, container, anchor)
       return
     }
 
-    // single nodes
+    // single nodes 移动单个节点，就是一般的标签节点
     const needTransition =
       moveType !== MoveType.REORDER &&
       shapeFlag & ShapeFlags.ELEMENT &&
       transition
+      // 判断需要过渡不，没有就直接移动了
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
@@ -2203,6 +2224,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         }
       }
     } else {
+      // 移动
       hostInsert(el!, container, anchor)
     }
   }
