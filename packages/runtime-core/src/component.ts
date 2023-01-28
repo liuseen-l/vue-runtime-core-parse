@@ -475,6 +475,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+// 创建实例
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -482,8 +483,7 @@ export function createComponentInstance(
 ) {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
-  const appContext =
-    (parent ? parent.appContext : vnode.appContext) || emptyAppContext
+  const appContext = (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
   const instance: ComponentInternalInstance = {
     uid: uid++,
@@ -493,6 +493,7 @@ export function createComponentInstance(
     appContext,
     root: null!, // to be immediately set
     next: null,
+    // 组件所渲染的内容，即子树（subTree），vnode
     subTree: null!, // will be set synchronously right after creation
     effect: null!,
     update: null!, // will be set synchronously right after creation
@@ -542,6 +543,7 @@ export function createComponentInstance(
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
+    // 一个布尔值，用来表示组件是否已经被挂载，初始值为 false
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
@@ -561,6 +563,7 @@ export function createComponentInstance(
     sp: null
   }
   if (__DEV__) {
+    // 设置组件的上下文
     instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
@@ -626,6 +629,7 @@ export function setupComponent(
   return setupResult
 }
 
+// 进一步加工
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
@@ -660,6 +664,10 @@ function setupStatefulComponent(
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
+
+
+
+  // 设置代理值，后续会调用 render.call(proxy,....)返回subtree
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
   if (__DEV__) {
     exposePropsOnRenderContext(instance)

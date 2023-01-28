@@ -62,6 +62,7 @@ export function nextTick<T = void>(
 // Use binary-search to find a suitable position in the queue,
 // so that the queue maintains the increasing order of job's id,
 // which can prevent the job from being skipped and also can avoid repeated patching.
+// 这里需要id呈递增序列（意味着按顺序更新），然后运用了一个二分查找，来找到传入id的job应该插入到哪个位置
 function findInsertionIndex(id: number) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
@@ -76,13 +77,9 @@ function findInsertionIndex(id: number) {
   return start
 }
 
+// 组件响应式数据发生变化时，调度器的主要函数，用来将一个任务添加到缓存队列中，并开始刷新队列
 export function queueJob(job: SchedulerJob) {
-  // the dedupe search uses the startIndex argument of Array.includes()
-  // by default the search index includes the current job that is being run
-  // so it cannot recursively trigger itself again.
-  // if the job is a watch() callback, the search will start with a +1 index to
-  // allow it recursively trigger itself - it is the user's responsibility to
-  // ensure it doesn't end up in an infinite loop.
+  // 如果当前缓存队列中没有任务，且当前传入的任务不在缓存队列中执行
   if (
     !queue.length ||
     !queue.includes(
@@ -93,6 +90,7 @@ export function queueJob(job: SchedulerJob) {
     if (job.id == null) {
       queue.push(job)
     } else {
+      // 组件更新触发的该函数和watch flush = pre | post 都走这里，插入之前，需要调整顺序，确保缓存队列中id的顺序是递增的，在调整的过程会发现，组件的更新job会排在在watch的job的前面
       queue.splice(findInsertionIndex(job.id), 0, job)
     }
     queueFlush()
@@ -100,8 +98,12 @@ export function queueJob(job: SchedulerJob) {
 }
 
 function queueFlush() {
+  // 如果还没有开始刷新队列，则刷新之
   if (!isFlushing && !isFlushPending) {
+  // 将该标志设置为 true 以避免重复刷新
     isFlushPending = true
+    // 这里充分说明了组件更新的effect，以及wacth flush = pre 和 post的回调函数都是在所有响应式数据更新完毕之后再进行的，这些数据更新是同步的，而缓存队列由于是微任务，所以
+    // 组件更新的effect 以及 watch flush = pre 和 post 的回调都是最后同步任务执行完毕再执行的异步任务
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }

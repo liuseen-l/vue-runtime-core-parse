@@ -441,8 +441,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             }
           ]
         }
-
-
       */  
       case Fragment: 
         processFragment(
@@ -1245,6 +1243,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
   }
 
+  // 处理组件
   const processComponent = (
     n1: VNode | null,
     n2: VNode,
@@ -1257,6 +1256,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     optimized: boolean
   ) => {
     n2.slotScopeIds = slotScopeIds
+    // 如果没有旧节点，代表是挂载组件
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ; (parentComponent!.ctx as KeepAliveContext).activate(
@@ -1267,6 +1267,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
           optimized
         )
       } else {
+        // 挂载组件
         mountComponent(
           n2,
           container,
@@ -1278,10 +1279,34 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         )
       }
     } else {
+      // 更新组件
       updateComponent(n1, n2, optimized)
     }
   }
 
+  /**
+   * 组件本身是对页面内容的封装，它用来描述页面内容的一部分。因此，一个组
+     件必须包含一个渲染函数，即 render 函数，并且渲染函数的返回值应该是虚拟 
+     DOM。换句话说，组件的渲染函数就是用来描述组件所渲染内容的接口
+
+    const MyComponent = {
+      // 组件名称，可选
+      name: "MyComponent",
+      // 组件的渲染函数，其返回值必须为虚拟 DOM
+      render() {
+        // 返回虚拟 DOM
+        return {
+          type: "div",
+          children: `我是文本内容`,
+        };
+      },
+    };
+    // 该 vnode 用来描述组件，type 属性存储组件的选项对象
+    const vnode = {
+     type: MyComponent
+     // ...
+    }
+  */
   const mountComponent: MountComponentFn = (
     initialVNode,
     container,
@@ -1293,10 +1318,12 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
   ) => {
     // 2.x compat may pre-create the component instance before actually
     // mounting
-    const compatMountInstance =
-      __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
+    // 获取自身vnode所对应的实例
+    const compatMountInstance = __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
+    // // 定义组件实例，一个组件实例本质上就是一个对象，它包含与组件有关的状态信息
     const instance: ComponentInternalInstance =
       compatMountInstance ||
+      // 将组件实例设置到 vnode 上，用于后续更新
       (initialVNode.component = createComponentInstance(
         initialVNode,
         parentComponent,
@@ -1322,6 +1349,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      // 加工组件实例身上的属性
       setupComponent(instance)
       if (__DEV__) {
         endMeasure(instance, `init`)
@@ -1342,6 +1370,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       return
     }
 
+    // 创建组件的副作用函数
     setupRenderEffect(
       instance,
       initialVNode,
@@ -1402,6 +1431,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     optimized
   ) => {
     const componentUpdateFn = () => {
+      // 检查组件是否已经被挂载
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
@@ -1410,7 +1440,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
 
         toggleRecurse(instance, false)
         // beforeMount hook
-        if (bm) {
+        if (bm) { // bm -> LifecycleHook
           invokeArrayFns(bm)
         }
         // onVnodeBeforeMount
@@ -1434,6 +1464,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             if (__DEV__) {
               startMeasure(instance, `render`)
             }
+            // 挂载组件实例，设置组件实例的子树,当中响应式数据访问数据会和effect建立依赖关系
             instance.subTree = renderComponentRoot(instance)
             if (__DEV__) {
               endMeasure(instance, `render`)
@@ -1475,6 +1506,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
+          // 初次挂载，调用 patch 函数第一个参数传递 null
           patch(
             null,
             subTree,
@@ -1534,6 +1566,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             )
           }
         }
+        // 重点：将组件实例的 isMounted 设置为 true，这样当更新发生时就不会再次进行挂载操作，而是会执行更新
         instance.isMounted = true
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -1543,6 +1576,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
+        // 当 isMounted 为 true 时，说明组件已经被挂载，只需要完成自更新即可
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
@@ -1586,15 +1620,19 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
+        // 获取组件实例的旧子树
         const prevTree = instance.subTree
+        // 更新组件实例的子树
         instance.subTree = nextTree
 
         if (__DEV__) {
           startMeasure(instance, `patch`)
         }
+        // 当 isMounted 为 true 时，说明组件已经被挂载，只需要完成自更新即可
+        // 所以在调用 patch 函数时，第一个参数为组件上一次渲染的子树，意思是，使用新的子树与上一次渲染的子树进行打补丁操作
         patch(
-          prevTree,
-          nextTree,
+          prevTree, // 旧子树
+          nextTree, // 新子树
           // parent may have changed if it's in a teleport
           hostParentNode(prevTree.el!)!,
           // anchor may have changed if it's in a fragment
@@ -1645,13 +1683,42 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
 
     // create reactive effect for rendering
+    // 创建副作用函数渲染组件的虚拟dom，这一步是hmr的关键，响应式数据发生变化会重新执行副作用函数，使得页面更新    
+    // 由于 effect 的执行是同步的，因此当响应式数据发生变化时，与之关联的副作用函数会同步执 行。换句话说，如果多次修改响应式数据的值，将会导致渲染函数执
+    // 行多次，这实际上是没有必要的。因此，我们需要设计一个机制，以使得无论对响应式数据进行多少次修改，副作用函数都只会重新执行一次。为此，我们需要实现一个调度器，
+    // 当副作用函数需要重新执行时，我们不会立即执行它，而是将它缓冲到一个微任务队列中，等到执行栈清空后，再将它从微任务队列中取出并执行。有了缓存机制，我们就有机会
+    // 对任务进行去重，从而避免多次执行副作用函数带来的性能开销。
+
+    /**
+     * 这里讨论一下watch flush = pre | post 调度器的执行以及组件effect调度器的执行，
+     * 首先watch Api的调用是发生在setup函数当中的，而setup函数的执行是发生在组件effect之外的，那么watch监听的响应式数据如何收集依赖呢？
+     * 这是因为watch自身维护着一个effect，因此watch监听的数据能够触发它自身维护的effect的调度器的执行，因此watch api不用在任何effect当中执行，并且监听的响应式数据发生变化
+     * 就能触发调度器执行，从而执行用户传入给watch的回调函数
+     * 
+     * 考虑一个场景，监听的响应式数据obj，同时也在dom中展示
+     * 
+     * 那么这个obj首先和watch的effect建立了依赖关系，然后由于在组件effect当中调用了vnode.render，返回的vnode.children中有通过{{obj.a}}展示数据,那么这个响应式数据和组件的effect也建立了依赖关系
+     * 
+     * obj的set集合依次存储 set([watch的effect,组件的effect])
+     * 
+     * 当这个响应式数据发生变化的时候，先触发watch的effect的调度器执行，执行的时候调用queueJob(job)，将job放入到缓存队列中，然后再触发组件的effect的调度器执行，
+     * 执行的时候也调用queueJob(job)，同时也将job存入缓存队列中，当数据同步更新执行完毕之后，再访问缓存队列，将这些job拿出来执行，而job执行的实际上就是执行effect.run()，重新执行副作用函数
+     * 
+     * 但是这里有个需要注意的点就是在将job放入到缓存队列中时，需要进行比较插入，每一个job都有一个id，缓存队列中的job id应该是递增的，因此插入的时候并不是向后插入，而是找到合适的位置插入
+     *
+     * 而watch job的id等于当前组件实例的id，而组件job的id也等于组件实例的id，因此这两个id大小是相等的，由于是升序，且两值相等，因此插入时就是按照谁先加入缓存队列谁先执行，
+     * 显然watch job会更先加入缓存队列，因此watch job先执行，由于onBeforeUpdate钩子是在组件effect执行时才执行（也就是job执行时内部会调用effect.run重新执行effect），
+     * 因此我们开发的时候就会看到响应式数据发生变化时watch的回调先于onBeforeUpdate的回调执行
+     * 
+     */
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      () => queueJob(update),
+      () => queueJob(update), // 当响应式数据发生变化时走的调度器
       instance.scope // track it in component's effect scope
     ))
 
     const update: SchedulerJob = (instance.update = () => effect.run())
+
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1876,7 +1943,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       )
     }
   }
-
 
   /**
    *  快速diff算法
@@ -2504,7 +2570,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
-  // 执行渲染的r ender 函数，将vnode渲染为真实 DOM 并添加到挂载点 container 下
+  // 执行渲染的render 函数，将vnode渲染为真实 DOM 并添加到挂载点 container 下
   const render: RootRenderFunction = (vnode, container, isSVG) => {
     // 如果传入的vnode为空
     if (vnode == null) {
