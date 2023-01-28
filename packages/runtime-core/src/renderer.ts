@@ -1707,7 +1707,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
      * 但是这里有个需要注意的点就是在将job放入到缓存队列中时，需要进行比较插入，每一个job都有一个id，缓存队列中的job id应该是递增的，因此插入的时候并不是向后插入，而是找到合适的位置插入
      *
      * 而watch job的id等于当前组件实例的id，而组件job的id也等于组件实例的id，因此这两个id大小是相等的，由于是升序，且两值相等，因此插入时就是按照谁先加入缓存队列谁先执行，
-     * 显然watch job会更先加入缓存队列，因此watch job先执行，由于onBeforeUpdate钩子是在组件effect执行时才执行（也就是job执行时内部会调用effect.run重新执行effect），
+     * 显然watch job会更先加入缓存队列，因此watch job先执行，由于onBeforeUpdate钩子的回调函数是在组件effect执行时才执行（也就是job执行时内部会调用effect.run重新执行effect），
      * 因此我们开发的时候就会看到响应式数据发生变化时watch的回调先于onBeforeUpdate的回调执行
      * 
      */

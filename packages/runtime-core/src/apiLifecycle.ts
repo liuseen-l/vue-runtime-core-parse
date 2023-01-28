@@ -63,6 +63,7 @@ export function injectHook(
   }
 }
 
+// 返回一个函数 
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
