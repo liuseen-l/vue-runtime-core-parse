@@ -275,6 +275,22 @@ const hasSetupBinding = (state: Data, key: string) =>
 
 export const  PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
+    // ctx身上暴露的是一些公用方法，比如
+    /**
+     * $el 
+      $data 
+      $props
+      $attrs
+      $slots
+      $refs
+      $parent
+      $root 
+      $emit
+      $options
+      $forceUpdate
+      $nextTick
+      $watch
+     */
     const { ctx, setupState, data, props, accessCache, type, appContext } =
       instance
 
@@ -295,13 +311,13 @@ export const  PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (n !== undefined) {
         switch (n) {
           case AccessTypes.SETUP:
-            return setupState[key]
+            return setupState[key] // setup中的响应式数据
           case AccessTypes.DATA:
-            return data[key]
-          case AccessTypes.CONTEXT:
-            return ctx[key]
+            return data[key] // data函数返回的数据
+          case AccessTypes.CONTEXT: 
+            return ctx[key]  // 组件暴露的公共方法
           case AccessTypes.PROPS:
-            return props![key]
+            return props![key] // 最后是父组件传递的props
           // default: just fallthrough
         }
       } else if (hasSetupBinding(setupState, key)) {
@@ -394,6 +410,7 @@ export const  PublicInstanceProxyHandlers: ProxyHandler<any> = {
   ): boolean {
     const { data, setupState, ctx } = instance
     if (hasSetupBinding(setupState, key)) {
+    // 优先设置setup函数中的响应式数据的值
       setupState[key] = value
       return true
     } else if (
@@ -404,9 +421,11 @@ export const  PublicInstanceProxyHandlers: ProxyHandler<any> = {
       warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
       return false
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+      // 再设置data属性中的值
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
+      // 如果设置的值时props当中的发出警告，props是只读的
       __DEV__ && warn(`Attempting to mutate prop "${key}". Props are readonly.`)
       return false
     }

@@ -1279,7 +1279,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         )
       }
     } else {
-      // 更新组件
+      // 响应式数据发生改变，会重新执行组件effect,就会执行patch(n1,n2)，此时n1,n2的type类型都是组件，因此会走else进行更新组件操作
       updateComponent(n1, n2, optimized)
     }
   }
@@ -1349,8 +1349,11 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      // 加工组件实例身上的属性
+
+      // 加工组件实例身上的属性,包括创建渲染上下文对象proxy，调用setup函数等等
       setupComponent(instance)
+
+
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1387,8 +1390,29 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
   }
 
+  // 更新组件
+  /**
+   * 把由父组件自更新所引起的子组件更新叫作子组件的被动更新。当子组件发生被动更新时，我们需要做的是：
+    1.检测子组件是否真的需要更新，因为子组件的 props 可能是不变的；
+    2.如果需要更新，则更新子组件的 props、slots 等内容。
+   */
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+    // 获取组件实例，即 n1.component，同时让新的组件虚拟节点 n2.component也指向组件实例
     const instance = (n2.component = n1.component)!
+
+    // 判断是否需要更新组件
+    // 因为是父组件的响应式数据发生改变引起的子组件被动更新，父组件将subTree(子组件)进行patch，当前的判断实际上是对subTree判断是否需要更新
+    /**
+     * subTree形式如下
+     * {
+     *    type:SonCompoent,
+     *    //父组件传给子组件的响应式数据
+     *    props:{ 
+     *      title:父组件的响应式数据
+     *    }
+     * }
+     */
+    // 这里判断是否需要更新实际上就是对props，slost等内容
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
         __FEATURE_SUSPENSE__ &&
@@ -1434,6 +1458,10 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       // 检查组件是否已经被挂载
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
+        // 获取父节点穿个子组件的props
+        /**
+         * 在 Vue.js 3 中，没有定义在 MyComponent.props 选项中的props 数据将存储到 attrs 对象中。也就是说父组件传个子组件的props数据如果没有显示接受，将自动存放到attrs当中
+         */
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)

@@ -325,6 +325,7 @@ export function shouldUpdateComponent(
   nextVNode: VNode,
   optimized?: boolean
 ): boolean {
+  // 判断传递给子组件的props solts改变没
   const { props: prevProps, children: prevChildren, component } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
   const emits = component!.emitsOptions
@@ -352,6 +353,7 @@ export function shouldUpdateComponent(
         return !!nextProps
       }
       // presence of this flag indicates props are always non-null
+      // 判断传递给子组件的props变了没
       return hasPropsChanged(prevProps, nextProps!, emits)
     } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps!

@@ -819,7 +819,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     // force teleport children to array so it can be moved around
     if (shapeFlag & ShapeFlags.TELEPORT) {
       type = ShapeFlags.ARRAY_CHILDREN
-      children = [createTextVNode(children as string)] // 如果vnode的children是一个字符串，比如 vnode.children = 'xxx' 会转换成 vnode.children = ['xxx']
+      children = [createTextVNode(children as string)] // 如果vnode的children是一个字符串，比如 vnode.children = 'xxx' 会转换成 vnode.children = [{type:Text,children:'xxx'}]
     } else {
       type = ShapeFlags.TEXT_CHILDREN
     }

@@ -667,25 +667,52 @@ function setupStatefulComponent(
 
 
 
-  // 设置代理值，后续会调用 render.call(proxy,....)返回subtree
+  // // 创建渲染上下文对象，本质上是组件实例的代理,后续会调用 render.call(proxy,....)返回subtree
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
+
+
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
-  // 2. call setup()
+  // 获取 setup 函数
   const { setup } = Component
+  // 如果setup函数存在
   if (setup) {
-    const setupContext = (instance.setupContext =
-      setup.length > 1 ? createSetupContext(instance) : null)
-
+    /**
+     * setup 函数的第一个参数取得外部为组件传递的 props 数据对象。同时，setup 函数还接收第  
+       二个参数 setupContext 对象，其中保存着与组件接口相关的数据和方法，
+     */
+    const setupContext = (instance.setupContext = setup.length > 1 ? createSetupContext(instance) : null)
+    // 设置当前的组件实例,因为setup函数内部可能会通过getCurrentInstance访问组件实例
     setCurrentInstance(instance)
+    // 阻止追踪依赖，为什么这里要阻止依赖收集呢？
+    /**
+     * 分析一下现在代码执行的情况，当前代码执行虽然在effect之外，但是是相对于当前组件的effect来说的，但是可能存在父组件嵌套子组件的情况，
+     * 父组件执行effect进行挂载的时候内部又有一个子组件，那么子组件也需要挂载，执行到这里虽然还处于子组件effect之外，但是是处于父组件当中的，
+     * 再看看setup函数当中的内容，如下
+     * setup() {
+        const count = ref(0)
+        console.log(count.value)
+        // 返回一个对象，对象中的数据会暴露到渲染函数中
+        return {
+          count
+        }
+       }
+     * 如果子组件setup函数执行，那么子组件的count就会和父组件的effect建立依赖关系，这是不对的
+     * 仔细思考会发现这里还有很巧妙的地方，就是data有响应式数据，setup中也有响应式数据而这些数据都需要和当前子组件的effect建立依赖关系吗？并不是 
+     * 我们只需要在templete模板中访问的响应式数据才和子组件的effect建立依赖关系，虽然这里的pauseTracking()目的不在于此，并且就算不执行pauseTracking()也不会
+     * 将响应式数据和当前子组件的effect建立依赖关系，但是分析时会联想到这些细节的点
+     */
     pauseTracking()
+    // 内部会执行setup函数
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
+      // 传给setup的参数
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
+
     resetTracking()
     unsetCurrentInstance()
 
@@ -720,6 +747,7 @@ function setupStatefulComponent(
         )
       }
     } else {
+      // 判断setup函数返回的结果
       handleSetupResult(instance, setupResult, isSSR)
     }
   } else {
@@ -732,6 +760,7 @@ export function handleSetupResult(
   setupResult: unknown,
   isSSR: boolean
 ) {
+  // 如果setup函数返回的结果是一个函数，那么这个函数将作为渲染函数
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -739,6 +768,7 @@ export function handleSetupResult(
       // set it as ssrRender instead.
       instance.ssrRender = setupResult
     } else {
+      // 覆盖组件模板编译生成的渲染函数
       instance.render = setupResult as InternalRenderFunction
     }
   } else if (isObject(setupResult)) {
@@ -753,6 +783,8 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 如果 setup 的返回值不是函数，则作为数据状态赋值给 setupState，这个将用于组件调用render方法时，如果vnode通过this（此时this被call方法指向了instance.porxy）访问数据时，作为数据的来源之一
+    // 数据的来源有 data setup props ....
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
