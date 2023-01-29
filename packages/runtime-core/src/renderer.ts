@@ -831,7 +831,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       ) {
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
-      }
+      } 
       if (vnode === subTree) {
         const parentVNode = parentComponent.vnode
         setScopeId(
@@ -1597,6 +1597,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         }
 
         // beforeUpdate hook
+        // 在执行setup函数时，如果有调用onBeforeUpdate钩子函数的话，就会给instance.bu创建一个空数组，并往里面push回调函数，因此触发更新的时候，这里就可以进行调用
         if (bu) {
           invokeArrayFns(bu)
         }
@@ -1652,7 +1653,11 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
           updateHOCHostEl(instance, nextTree.el)
         }
         // updated hook
+        // 在执行setup函数时，如果有调用onUpdate钩子函数的话，就会给instance.u创建一个空数组，并往里面push回调函数，因此触发更新的时候，这里就可以进行调用
         if (u) {
+          // 这里没有直接执行onUpdate钩子函数，而是调用queuePostRenderEffect函数，内部会调用queuePostFlushCb函数，而该函数会执行pendingPostFlushCbs.push(cb);
+          // pendingPostFlushCbs这个数组不仅用来存储onUpdate钩子的回调，还用于存储watch flush = post的回调，这个数组的flush操作，将会在try{}finally{ 这里flush }
+          // 而此时代码执行到这里的时候，我们实际上还在try{当中}，因此不能像onBeforeUpdate钩子函数一样在这里就执行了
           queuePostRenderEffect(u, parentSuspense)
         }
         // onVnodeUpdated
@@ -1681,7 +1686,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         }
       }
     }
-
     // create reactive effect for rendering
     // 创建副作用函数渲染组件的虚拟dom，这一步是hmr的关键，响应式数据发生变化会重新执行副作用函数，使得页面更新    
     // 由于 effect 的执行是同步的，因此当响应式数据发生变化时，与之关联的副作用函数会同步执 行。换句话说，如果多次修改响应式数据的值，将会导致渲染函数执
@@ -2171,7 +2175,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
           patched++
         }
       }
-
 
       // 上面else语句当中的操作都是卸载和更新，接下来就是移动和挂载
 

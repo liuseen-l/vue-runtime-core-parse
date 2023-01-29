@@ -15,11 +15,12 @@ import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
 export function injectHook(
-  type: LifecycleHooks,
-  hook: Function & { __weh?: Function },
-  target: ComponentInternalInstance | null = currentInstance,
+  type: LifecycleHooks, // 声明周期钩子类型
+  hook: Function & { __weh?: Function }, // 用户传给声明周期钩子的回调
+  target: ComponentInternalInstance | null = currentInstance, // 拿到当前执行的组件的实例
   prepend: boolean = false
 ): Function | undefined {
+  // 判断获取的当前执行的组件实例是否存在
   if (target) {
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
@@ -38,6 +39,7 @@ export function injectHook(
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
         setCurrentInstance(target)
+        // 真正执行钩子回调函数的地方
         const res = callWithAsyncErrorHandling(hook, target, type, args)
         unsetCurrentInstance()
         resetTracking()
@@ -46,6 +48,7 @@ export function injectHook(
     if (prepend) {
       hooks.unshift(wrappedHook)
     } else {
+      // 假设当前用户调用了 onBeforeUpdate钩子函数，那么 hooks = instance['bu'] ，是一个数组，用来存放回调,刚开始为[]
       hooks.push(wrappedHook)
     }
     return wrappedHook
@@ -66,6 +69,7 @@ export function injectHook(
 // 返回一个函数 
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
+  // hook就是用户传入的生命钩子回调
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
