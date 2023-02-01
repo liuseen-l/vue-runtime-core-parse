@@ -569,6 +569,7 @@ export function createComponentInstance(
     instance.ctx = { _: instance }
   }
   instance.root = parent ? parent.root : instance
+  // 创建组件实例的时候绑定emit
   instance.emit = emit.bind(null, instance)
 
   // apply custom element special handling
@@ -611,7 +612,8 @@ export function isStatefulComponent(instance: ComponentInternalInstance) {
 
 export let isInSSRComponentSetup = false
 
-export function setupComponent(
+export function 
+setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
 ) {
@@ -619,7 +621,14 @@ export function setupComponent(
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
+  // 为instance添加props，如果是事件，直接绑定到props上
   initProps(instance, props, isStateful, isSSR)
+  /**
+   * 这里思考一个问题就是用户调用了defineProps，这个函数是编译时候处理，还是运行时处理？
+   * 首先，代码执行到这里的时候，我们进行了initProps操作，这个操作就是在instance身上去绑定那些父组件传入的props,
+   * 如果说defineProps是在运行时操作的，那么这里肯定是操作不了的，因为这需要执行setup函数才可以，而执行setup函数之前我们还有一个操作
+   * 就是去生成instance.proxy，后续effect函数执行时，作为render.call(instance.proxy)中的this参数，
+   */
   initSlots(instance, children)
 
   const setupResult = isStateful
@@ -667,7 +676,7 @@ function setupStatefulComponent(
 
 
 
-  // // 创建渲染上下文对象，本质上是组件实例的代理,后续会调用 render.call(proxy,....)返回subtree
+  // // 创建渲染上下文对象，本质上是组件实例的代理,后续会调用 render.call(proxy,....)返回subtree，instance.proxy作为render当中的this，可以访问data setup props当中的数据
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
 
 
@@ -709,7 +718,8 @@ function setupStatefulComponent(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
-      // 传给setup的参数
+      // 传给setup的参数,注意这里的instance.props实际上已经被shallowReactive包裹了一层，只不过instance.props是给模板访问
+      // 而这里传入给setup函数，是在setup函数中访问，当中可能会涉及到值的修改，因此需要再包裹一层shallowReadonly
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
 
@@ -783,8 +793,9 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
-    // 如果 setup 的返回值不是函数，则作为数据状态赋值给 setupState，这个将用于组件调用render方法时，如果vnode通过this（此时this被call方法指向了instance.porxy）访问数据时，作为数据的来源之一
-    // 数据的来源有 data setup props ....
+    // 如果 setup 的返回值不是函数，则作为数据状态赋值给 setupState并绑定到instance身上，便于instance.proxy的getter访问，这个将用于组件调用render方法时
+    // 如果vnode的Children中通过this（此时this被call方法指向了instance.porxy）访问数据时，作为数据的来源之一，数据的来源有 data setup props ....
+    // 这里还调用了proxyRefs，将setup函数返回的对象包过成响应式的
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -983,6 +994,7 @@ export function createSetupContext(
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
+      // 未被子组件接受的props
       get attrs() {
         return attrs || (attrs = createAttrsProxy(instance))
       },
@@ -990,6 +1002,7 @@ export function createSetupContext(
         return shallowReadonly(instance.slots)
       },
       get emit() {
+        // 调用emit
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
       expose

@@ -163,6 +163,7 @@ export function initProps(
 
   instance.propsDefaults = Object.create(null)
 
+  // 去将子组件接受的props设置到const props = {}当中，子组件没有接受的props设置到const attrs = {} 当中
   setFullProps(instance, rawProps, props, attrs)
 
   // ensure all declared prop keys are present
@@ -178,7 +179,7 @@ export function initProps(
   }
 
   if (isStateful) {
-    // stateful
+    //  将解析出的 props 数据包装为 shallowReactive 并定义到组件实例上，这是为了给模板插值用法使用的，而再setup函数中使用会再用shallowReadonly包装一层
     instance.props = isSSR ? props : shallowReactive(props)
   } else {
     if (!instance.type.props) {
@@ -189,6 +190,7 @@ export function initProps(
       instance.props = props
     }
   }
+   // 将 props 中没有接受的剩余数据定义到组件实例上
   instance.attrs = attrs
 }
 
@@ -336,15 +338,17 @@ export function updateProps(
 function setFullProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
-  props: Data,
+  props: Data, // 存储接受的props
   attrs: Data
 ) {
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
   let rawCastValues: Data | undefined
+  // rawProps就是我们在子组件定义的要接受的props
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
+      // 有一部分key，是属于vue自身的，这部分不应该不传递，这里进行判断
       if (isReservedProp(key)) {
         continue
       }
@@ -459,7 +463,7 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
-  comp: ConcreteComponent,
+  comp: ConcreteComponent, // 组件的vnode -> vnode.type
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
@@ -468,8 +472,9 @@ export function normalizePropsOptions(
   if (cached) {
     return cached
   }
-
+  // 子组件接受的props
   const raw = comp.props
+  
   const normalized: NormalizedPropsOptions[0] = {}
   const needCastKeys: NormalizedPropsOptions[1] = []
 

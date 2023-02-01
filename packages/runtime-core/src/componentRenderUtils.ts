@@ -63,6 +63,7 @@ export function renderComponentRoot(
 
   let result
   let fallthroughAttrs
+  // 设置当前渲染的组件实例
   const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
@@ -73,6 +74,7 @@ export function renderComponentRoot(
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
+      // 获取vnodc
       result = normalizeVNode(
         render!.call(
           proxyToUse,
