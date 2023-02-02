@@ -315,7 +315,7 @@ export const  PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.DATA:
             return data[key] // data函数返回的数据
           case AccessTypes.CONTEXT: 
-            return ctx[key]  // 组件暴露的公共方法
+            return ctx[key]  // 用户可能设置的一些全局事件，这些事件是绑定在ctx上的
           case AccessTypes.PROPS:
             return props![key] // 最后是父组件传递的props
           // default: just fallthrough
@@ -336,7 +336,7 @@ export const  PublicInstanceProxyHandlers: ProxyHandler<any> = {
         return props![key]
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
         accessCache![key] = AccessTypes.CONTEXT
-        return ctx[key]
+        return ctx[key]  // 返回$slots $emit 这样的vue内置公共属性
       } else if (!__FEATURE_OPTIONS_API__ || shouldCacheAccess) {
         accessCache![key] = AccessTypes.OTHER
       }

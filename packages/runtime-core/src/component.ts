@@ -622,13 +622,13 @@ setupComponent(
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   // 为instance添加props，如果是事件，直接绑定到props上
-  initProps(instance, props, isStateful, isSSR)
   /**
    * 这里思考一个问题就是用户调用了defineProps，这个函数是编译时候处理，还是运行时处理？
    * 首先，代码执行到这里的时候，我们进行了initProps操作，这个操作就是在instance身上去绑定那些父组件传入的props,
    * 如果说defineProps是在运行时操作的，那么这里肯定是操作不了的，因为这需要执行setup函数才可以，而执行setup函数之前我们还有一个操作
    * 就是去生成instance.proxy，后续effect函数执行时，作为render.call(instance.proxy)中的this参数，
    */
+  initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 
   const setupResult = isStateful
@@ -692,7 +692,8 @@ function setupStatefulComponent(
        二个参数 setupContext 对象，其中保存着与组件接口相关的数据和方法，
      */
     const setupContext = (instance.setupContext = setup.length > 1 ? createSetupContext(instance) : null)
-    // 设置当前的组件实例,因为setup函数内部可能会通过getCurrentInstance访问组件实例
+    // 设置当前的组件实例,因为setup函数内部可能会通过getCurrentInstance访问组件实例，同时为了实现在 A 组件的 setup 函数中调用 onMounted 函数会将该钩子函数注册
+    // 到 A 组件上；而在 B 组件的 setup 函数中调用 onMounted 函数会将钩子函数注册到 B 组件上
     setCurrentInstance(instance)
     // 阻止追踪依赖，为什么这里要阻止依赖收集呢？
     /**
