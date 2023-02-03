@@ -1279,7 +1279,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         )
       }
     } else {
-      // 响应式数据发生改变，会重新执行组件effect,就会执行patch(n1,n2)，此时n1,n2的type类型都是组件，因此会走else进行更新组件操作
+      // 响应式数据发生改变，会重新执行组件effect,就会执行patch(instance.preSubree,instance.nextSubtree)，如果preSubree,nextSubtree的type类型都是组件，就会走else进行更新组件操作
       updateComponent(n1, n2, optimized)
     }
   }
@@ -1397,22 +1397,22 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     2.如果需要更新，则更新子组件的 props、slots 等内容。
    */
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
-    // 获取组件实例，即 n1.component，同时让新的组件虚拟节点 n2.component也指向组件实例
+    // 走到这里说明前后vnode.type一致，可以复用，获取组件实例，即 n1.component，同时让新的组件虚拟节点 n2.component也指向组件实例
     const instance = (n2.component = n1.component)!
 
     // 判断是否需要更新组件
     // 因为是父组件的响应式数据发生改变引起的子组件被动更新，父组件将subTree(子组件)进行patch，当前的判断实际上是对subTree判断是否需要更新
     /**
-     * subTree形式如下
+     * subTree形式如下，也就是n1，n2的形式
      * {
      *    type:SonCompoent,
      *    //父组件传给子组件的响应式数据
      *    props:{ 
-     *      title:父组件的响应式数据
+     *      title:{响应式数据this.xxx}
      *    }
      * }
      */
-    // 这里判断是否需要更新实际上就是对props，slost等内容
+    // 这里判断是否需要更新，实际上就是对props，slost等内容
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
         __FEATURE_SUSPENSE__ &&
@@ -1431,11 +1431,13 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         return
       } else {
         // normal update
+        // 将子组件新的vnode(n2)绑定到子组件的instance.next上，而instance.vnode依旧是旧的vnode
         instance.next = n2
         // in case the child component is also queued, remove it to avoid
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
         // instance.update is the reactive effect.
+        // 执行子组件的调度器，内部调用effect.run，相当于重新执行子组件的effect
         instance.update()
       }
     } else {
@@ -1618,8 +1620,16 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
 
         // Disallow component effect recursion during pre-lifecycle hooks.
         toggleRecurse(instance, false)
+
+        // next的存在用于判断子组件是否被动更新（normal update），为什么要在这里判断呢？在updateComponent函数中更新不行吗？
+        /**
+         * 因为父组件传递给子组件的props变了，那么子组件需要被动更新，更新就需要走子组件的effect，而子组件的effect是通过子组件的instance.update()执行的
+         * 因此需要在updateComponent函数中执行子组件的instance.update()，去触发子组件的effect，从而可以触发子组件的更新钩子函数，而在执行子组件的instance.update()
+         * 之前，会进行instance.next = n2的赋值，这个n2就是子组件的vnode
+         */
         if (next) {
           next.el = vnode.el
+          // 更新
           updateComponentPreRender(instance, next, optimized)
         } else {
           next = vnode
@@ -1775,11 +1785,17 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     nextVNode: VNode,
     optimized: boolean
   ) => {
+    // 给新的vnode添加component属性，赋值为instance
     nextVNode.component = instance
-    const prevProps = instance.vnode.props
+    // instance身上的vnode存储的还是旧的vnode，因此可以通过它拿到之前的props,这个props是父组件传给子组件的props，不是子组件接受的props
+    const prevProps = instance.vnode.props 
+    // 将新的vnode换上去
     instance.vnode = nextVNode
     instance.next = null
+    // 更新props，因为在第一次挂载的时候，instance.props是被shallowReactive(props)代理过的，因此这里修改props相当于在修改响应式数据，而如果子组件
+    // 中的dom有访问props数据，那么就会触发子组件的effect重新执行，effect内部就会执行更新钩子函数
     updateProps(instance, nextVNode.props, prevProps, optimized)
+    // 更新slors
     updateSlots(instance, nextVNode.children, optimized)
 
     pauseTracking()

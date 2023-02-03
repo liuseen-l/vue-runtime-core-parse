@@ -207,12 +207,14 @@ export function updateProps(
   rawPrevProps: Data | null,
   optimized: boolean
 ) {
+  // 这里的props是旧的子组件接受的props
   const {
     props,
     attrs,
     vnode: { patchFlag }
   } = instance
-  const rawCurrentProps = toRaw(props)
+  // 因为子组件instance上的props是被shallowReactive代理过的，因此先获取子组件旧的原始props
+  const rawCurrentProps = toRaw(props) 
   const [options] = instance.propsOptions
   let hasAttrsChanged = false
 
@@ -245,7 +247,8 @@ export function updateProps(
               hasAttrsChanged = true
             }
           } else {
-            const camelizedKey = camelize(key)
+            // 驼峰命名
+            const camelizedKey = camelize(key) 
             props[camelizedKey] = resolvePropValue(
               options,
               rawCurrentProps,
@@ -344,7 +347,7 @@ function setFullProps(
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
   let rawCastValues: Data | undefined
-  // rawProps就是我们在子组件定义的要接受的props
+  // rawProps是父组件传入的props
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
