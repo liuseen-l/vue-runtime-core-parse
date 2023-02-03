@@ -1447,6 +1447,9 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
   }
 
+  // instance.vnode ，instance.next 都是指向的vnode
+  // instance.type 指向 vnode.type
+  // vnode.compoent 指向 instance vnode.el指向真实dom
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
     initialVNode,
@@ -1625,13 +1628,14 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         /**
          * 因为父组件传递给子组件的props变了，那么子组件需要被动更新，更新就需要走子组件的effect，而子组件的effect是通过子组件的instance.update()执行的
          * 因此需要在updateComponent函数中执行子组件的instance.update()，去触发子组件的effect，从而可以触发子组件的更新钩子函数，而在执行子组件的instance.update()
-         * 之前，会进行instance.next = n2的赋值，这个n2就是子组件的vnode
+         * 之前，会进行instance.next = n2 的赋值，这个n2就是子组件的vnode
          */
         if (next) {
           // 更新子组件新的vnode的el，vnode是子组件旧的vnode
           next.el = vnode.el
-          // 真正更新子组件调用updateComponentPreRender，next是n2,instance是子组件的instance，这个是通过闭包访问的setupRenderEffect参数中的instance
+          // 真正被动更新子组件调用updateComponentPreRender，next是n2,instance是子组件的instance，这个是通过闭包访问的setupRenderEffect参数中的instance
           updateComponentPreRender(instance, next, optimized)
+          // 执行完这个instance.props instance.attrs instance.slots 都更新完毕了
         } else {
           next = vnode
         }
@@ -1657,6 +1661,16 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
+        // 如果子组件是被动更新的，那么上方执行了updateComponentPreRender()方法之后，instance 的 props，attrs，slots 已经更新了
+        // 如果subtree内部通过this.props访问父组件传的值时，renderContext 内部会返回 instance.props[key]，那么 Children 的值就更新了
+        // 之后去 patch 节点，就是更新Text节点了
+        /**
+         * {
+         *    type:'div',
+         *    Children:`父组件的 ${this.title} props` // 这里this指向的是renderContext
+         * }
+         */
+        // 内部调用instance.render.call(renderContext)
         const nextTree = renderComponentRoot(instance)
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1793,14 +1807,13 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     // 将新的vnode换上去
     instance.vnode = nextVNode
     instance.next = null
-    // 更新props，因为在第一次挂载的时候，instance.props是被shallowReactive(props)代理过的，因此这里修改props相当于在修改响应式数据，而如果子组件
-    // 中的dom有访问props数据，那么就会触发子组件的effect重新执行，effect内部就会执行更新钩子函数
+    // 更新props
     updateProps(instance, nextVNode.props, prevProps, optimized)
     // 更新slors
     updateSlots(instance, nextVNode.children, optimized)
 
     pauseTracking()
-    // props update may have triggered pre-flush watchers.
+    // props update may have triggered pre-flush watchers.   
     // flush them before the render update.
     flushPreFlushCbs()
     resetTracking()
