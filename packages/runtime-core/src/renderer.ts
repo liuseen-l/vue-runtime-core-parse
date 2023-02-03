@@ -1628,8 +1628,9 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
          * 之前，会进行instance.next = n2的赋值，这个n2就是子组件的vnode
          */
         if (next) {
+          // 更新子组件新的vnode的el，vnode是子组件旧的vnode
           next.el = vnode.el
-          // 更新
+          // 真正更新子组件调用updateComponentPreRender，next是n2,instance是子组件的instance，这个是通过闭包访问的setupRenderEffect参数中的instance
           updateComponentPreRender(instance, next, optimized)
         } else {
           next = vnode
