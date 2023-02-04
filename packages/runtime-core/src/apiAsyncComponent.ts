@@ -43,7 +43,9 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
+  // options 可以是配置项，也可以是加载器
   if (isFunction(source)) {
+    // 如果 options 是加载器，则将其格式化为配置项形式
     source = { loader: source }
   }
 

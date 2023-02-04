@@ -83,24 +83,24 @@ export function emit(
       emitsOptions,
       propsOptions: [propsOptions]
     } = instance
+    // 判断有没有显示的去接受父组件传递给子组件的方法
     if (emitsOptions) {
-      if (
-        !(event in emitsOptions) &&
-        !(
-          __COMPAT__ &&
-          (event.startsWith('hook:') ||
-            event.startsWith(compatModelEventPrefix))
-        )
-      ) {
+      // 判断当前的事件名，在不在显示接受的emitsOptions接受队列里，如果不在，再进行下一步判断
+      if (!(event in emitsOptions) && !(__COMPAT__ && (event.startsWith('hook:') || event.startsWith(compatModelEventPrefix)))) {
+        // 再判断有没有props，有props再判断自定义事件在不在props当中，即父组件传了但子组件没有显示接受
         if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+          // 如果都不符合，警告
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
               `the emits option nor as an "${toHandlerKey(event)}" prop.`
           )
         }
       } else {
+        // 如果在，就从接受队列里取出这个自定义事件
         const validator = emitsOptions[event]
+        // 判断自定义事件是否为函数
         if (isFunction(validator)) {
+          // 执行自定义函数
           const isValid = validator(...rawArgs)
           if (!isValid) {
             warn(
