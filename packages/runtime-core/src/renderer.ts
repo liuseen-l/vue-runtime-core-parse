@@ -1791,7 +1791,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         : void 0
       update.ownerInstance = instance
     }
-
+    // 执行effect.run开始挂载
     update()
   }
 

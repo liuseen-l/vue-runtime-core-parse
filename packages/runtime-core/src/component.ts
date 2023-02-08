@@ -963,6 +963,7 @@ function createAttrsProxy(instance: ComponentInternalInstance): Data {
   )
 }
 
+
 export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
