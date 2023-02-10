@@ -198,6 +198,8 @@ export function defineComponent<
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // implementation, close to no-op
+// 运行时进行的，比如在setup函数中 import 导入一个组件
 export function defineComponent(options: unknown) {
+  // 判断是否为函数式组件，如果是的话，返回一个包装的对象。如果不是，返回options，options的格式差不多为 options = {__name:'Suspense',setup:f }
   return isFunction(options) ? { setup: options, name: options.name } : options
 }
