@@ -1797,7 +1797,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
 
   const updateComponentPreRender = (
     instance: ComponentInternalInstance,
-    nextVNode: VNode,
+    nextVNode: VNode, // n2
     optimized: boolean
   ) => {
     // 给新的vnode添加component属性，赋值为instance

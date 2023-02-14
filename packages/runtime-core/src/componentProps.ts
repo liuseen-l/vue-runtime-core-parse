@@ -203,8 +203,8 @@ function isInHmrContext(instance: ComponentInternalInstance | null) {
 
 export function updateProps(
   instance: ComponentInternalInstance,
-  rawProps: Data | null,
-  rawPrevProps: Data | null,
+  rawProps: Data | null,     // 新得vnode的props
+  rawPrevProps: Data | null, // 旧的vnode的props
   optimized: boolean
 ) {
   // 这里的props是旧的子组件接受的props
@@ -237,6 +237,7 @@ export function updateProps(
           continue
         }
         // PROPS flag guarantees rawProps to be non-null
+        // rawProps是n2,获取n2.props[key]的值
         const value = rawProps![key]
         if (options) {
           // attr / props separation was done on init and will be consistent
@@ -249,6 +250,13 @@ export function updateProps(
           } else {
             // 驼峰命名
             const camelizedKey = camelize(key) 
+            // instance.props是被shallowReactive代理过的，这里通过props[camelizedKey]直接修改值。如果子组件有通过watch去监听porps，那么这里props改变会触发子组件的watch回调函数
+            /**
+             * const props = defineProps<{r:number}>()
+             * watch( () => props.r,()=>{
+             *    console.log('trigger了')
+             * })
+             */
             props[camelizedKey] = resolvePropValue(
               options,
               rawCurrentProps,
