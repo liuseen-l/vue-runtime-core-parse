@@ -626,7 +626,7 @@ setupComponent(
    * 这里思考一个问题就是用户调用了defineProps，这个函数是编译时候处理，还是运行时处理？
    * 首先，代码执行到这里的时候，我们进行了initProps操作，这个操作就是在instance身上去绑定那些父组件传入的props,
    * 如果说defineProps是在运行时操作的，那么这里肯定是操作不了的，因为这需要执行setup函数才可以，而执行setup函数之前我们还有一个操作
-   * 就是去生成instance.proxy，后续effect函数执行时，作为render.call(instance.proxy)中的this参数，
+   * 就是去生成instance.proxy，后续effect函数执行时，作为render.call(instance.proxy)中的this参数，所以所有define开头的都是编译时的
    */
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
