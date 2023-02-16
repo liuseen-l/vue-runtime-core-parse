@@ -917,6 +917,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
 
     const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
+    //  dynamicChildren 属性，用于存储内部所有动态子节点。
     if (dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
@@ -930,7 +931,9 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
         traverseStaticChildren(n1, n2)
       }
-    } else if (!optimized) {
+    } 
+    // 不优化，走diff算法
+    else if (!optimized) {
       // 更新 children
       patchChildren(
         n1,
@@ -1037,8 +1040,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
 
   // The fast path for blocks.
   const patchBlockChildren: PatchBlockChildrenFn = (
-    oldChildren,
-    newChildren,
+    oldChildren, // n1.dynamicChildren
+    newChildren, // n2.dynamicChildren
     fallbackContainer,
     parentComponent,
     parentSuspense,
@@ -1202,6 +1205,10 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
+        // 一个稳定的fragment不需要去更新子节点的顺序，什么叫稳定？
+        /**
+         * 比如 v-for 如果遍历一个响应式数组，那么是不稳定得，但是如果是一个非响应式的数组，那么就是稳定的，那么就会走这个patchBlockChildren去更新节点
+         */
         patchBlockChildren(
           n1.dynamicChildren,
           dynamicChildren,
@@ -1413,7 +1420,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
      *    }
      * }
      */
-    // 这里判断是否需要更新，实际上就是对props，slost等内容
+    // 这里判断是否需要更新，实际上就是对props，slost等内容的比较
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
         __FEATURE_SUSPENSE__ &&
