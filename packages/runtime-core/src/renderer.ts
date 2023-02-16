@@ -888,6 +888,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
   ) => {
     // 因为是打补丁的操作，因此真实dom没有进行删除，而是需要进行复用，因此这里需要存储旧的虚拟dom中保存的 el(真实dom)
     const el = (n2.el = n1.el!)
+    // patchFlag 是一个 number 类型值，记录当前元素的变化的部分
     let { patchFlag, dynamicChildren, dirs } = n2
     // #1426 take the old vnode's patch flag into account since user may clone a
     // compiler-generated vnode, which de-opts to FULL_PROPS
