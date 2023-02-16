@@ -917,6 +917,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
 
     const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
+    //  dynamicChildren 属性，用于存储内部所有动态子节点。
     if (dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
@@ -930,7 +931,9 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
         traverseStaticChildren(n1, n2)
       }
-    } else if (!optimized) {
+    } 
+    // 不优化，走diff算法
+    else if (!optimized) {
       // 更新 children
       patchChildren(
         n1,
@@ -1037,8 +1040,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
 
   // The fast path for blocks.
   const patchBlockChildren: PatchBlockChildrenFn = (
-    oldChildren,
-    newChildren,
+    oldChildren, // n1.dynamicChildren
+    newChildren, // n2.dynamicChildren
     fallbackContainer,
     parentComponent,
     parentSuspense,
@@ -1202,6 +1205,44 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
+        // 一个稳定的fragment不需要去更新子节点的顺序，什么叫稳定？
+        /**
+         * 比如 v-for 如果遍历一个响应式数组，那么是不稳定得，但是如果是一个非响应式的数组，那么就是稳定的，那么就会走这个patchBlockChildren去更新节点
+         * 
+         * <script setup>
+              let r = [1,2,3] 
+              let r = reactive([1,2,3])
+              </script>
+
+              <template>
+                <div>
+                  <input v-for="item in r">
+                </div>
+              </template>
+          这两种情况其实都是不稳定的，尽管在这里看到r是一个没有经过Proxy代理的数组，但是也是不稳定的，为什么呢？因为虽然不是响应式数据，即我们去更新数据不会触发组件的effect重新执行
+          但是我们需要考虑到当前组件的temple模板中可能还有其他的响应式数据和组件的effect建立了依赖关系，那么触发其他响应式数据更新的时候，也会重新渲染，那么就会不稳定，如下代码
+          <script setup>
+            import { ref } from 'vue'
+            let r = [1,2,3]
+
+            let re = ref(1)
+            function add(){
+                r.push(4)
+                re.value++
+            }
+            </script>
+
+            <template>
+              <div>
+                <div>
+                  {{re}}
+                </div>
+                <button @click="add">
+                </button>
+                <input v-for="item in r">
+              </div>
+            </template>
+         */
         patchBlockChildren(
           n1.dynamicChildren,
           dynamicChildren,
@@ -1413,7 +1454,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
      *    }
      * }
      */
-    // 这里判断是否需要更新，实际上就是对props，slost等内容
+    // 这里判断是否需要更新，实际上就是对props，slost等内容的比较
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
         __FEATURE_SUSPENSE__ &&
