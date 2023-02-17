@@ -56,8 +56,32 @@ export function nextTick<T = void>(
   fn?: (this: T) => void
 ): Promise<void> {
   /**
-     这里的触发时机时间上是有2种情况的，如果 nextTick 先于 watch 注册的话,那么此时的 currentFlushPromise 为 null
-   * 那么这个时候返回 resolvedPromise，但是调用的时候this为void，因此最后转换的结果为 resolvedPromise.then(fn)
+     <script setup>
+        import { ref,watch,nextTick } from 'vue'
+        let r = ref(1)
+        watch(r,()=>{
+            console.log('change')
+        })
+        function add(){
+          r.value++        // r.value++ 和 nextTick 交换顺序执行时机会不一样
+          nextTick(()=>{
+            console.log('new nextTick')
+          })
+        }
+        </script>
+
+        <template>
+            <div>
+              {{r}}
+          </div>
+          <button @click="add">
+          </button>
+        </template>
+
+    先改值，是resolvedPromise.then(watch).then(nextTick)
+    
+    先nextTick是resolvedPromise.then(nextTick)
+                resolvedPromise.then(watch)
    * 
    *  */
   const p = currentFlushPromise || resolvedPromise
