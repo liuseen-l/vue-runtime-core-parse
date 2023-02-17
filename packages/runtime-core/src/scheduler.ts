@@ -50,11 +50,16 @@ let currentFlushPromise: Promise<void> | null = null
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 
+// 因为nextTick函数的执行地方是在setup函数当中的，和watch的执行地方是相同的
 export function nextTick<T = void>(
   this: T,
   fn?: (this: T) => void
 ): Promise<void> {
-  // 假设一个vue文件setup函数被执行的时候，这个时候当中的watch函数会注册回调函数，而这些回调函数的执行时机就是currentFlushPromise()之后
+  /**
+     这里的触发时机时间上是有2种情况的，如果 nextTick 先于 watch 注册的话,那么此时的 currentFlushPromise 为 null
+   * 那么这个时候返回 resolvedPromise，但是调用的时候this为void，因此最后转换的结果为 resolvedPromise.then(fn)
+   * 
+   *  */
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
