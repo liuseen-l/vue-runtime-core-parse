@@ -54,6 +54,7 @@ export function nextTick<T = void>(
   this: T,
   fn?: (this: T) => void
 ): Promise<void> {
+  // 假设一个vue文件setup函数被执行的时候，这个时候当中的watch函数会注册回调函数，而这些回调函数的执行时机就是currentFlushPromise()之后
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
@@ -91,6 +92,7 @@ export function queueJob(job: SchedulerJob) {
       queue.push(job)
     } else {
       // 组件更新触发的该函数和watch flush = pre | post 都走这里，插入之前，需要调整顺序，确保缓存队列中id的顺序是递增的，在调整的过程会发现，组件的更新job会排在在watch的job的前面
+      // 组件id和当前组件当中的watch的id是相同的
       queue.splice(findInsertionIndex(job.id), 0, job)
     }
     queueFlush()
