@@ -78,7 +78,7 @@ export function nextTick<T = void>(
           </button>
         </template>
 
-    先改值，是resolvedPromise.then(watch).then(nextTick)
+    先改值，是 resolvedPromise.then(watch).then(nextTick)
     
     先nextTick是resolvedPromise.then(nextTick)
                 resolvedPromise.then(watch)
