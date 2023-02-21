@@ -1395,7 +1395,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       // 加工组件实例身上的属性,包括创建渲染上下文对象proxy(作为render.call的this)，调用setup函数等等
       setupComponent(instance)
 
-
       if (__DEV__) {
         endMeasure(instance, `init`)
       }

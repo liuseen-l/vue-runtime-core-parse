@@ -840,6 +840,7 @@ export function finishComponentSetup(
   isSSR: boolean,
   skipOptions?: boolean
 ) {
+  // instance.type = vnode.type
   const Component = instance.type as ComponentOptions
 
   if (__COMPAT__) {
@@ -894,6 +895,7 @@ export function finishComponentSetup(
       }
     }
 
+    // 实际上是将vnode.type.remder 赋值给 instance.render
     instance.render = (Component.render || NOOP) as InternalRenderFunction
 
     // for runtime-compiled render functions using `with` blocks, the render
