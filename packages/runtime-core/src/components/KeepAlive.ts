@@ -280,8 +280,7 @@ const KeepAliveImpl: ComponentOptions = {
         return rawVNode
       }
 
-      // 生成 keep-alive 的 vnode
-      let vnode = getInnerChild(rawVNode)
+      let vnode = getInnerChild(rawVNode) // 大部分场景下可以理解为返回rawVNode本身
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded
@@ -331,7 +330,7 @@ const KeepAliveImpl: ComponentOptions = {
           setTransitionHooks(vnode, vnode.transition!)
         }
         // avoid vnode being mounted as fresh
-        // 将KeepAlive组件内部需要缓存的组件的 vnode 上的 shapFlage 属性标记keepAlive，避免渲染器重新挂载它
+        // 将 vnode 的 shapFlage 属性标记，避免渲染器重新挂载它
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest
         // 将这个重新渲染的缓存组件放到最后
@@ -346,7 +345,7 @@ const KeepAliveImpl: ComponentOptions = {
         }
       }
       // avoid vnode being unmounted
-      // 标记组件，表示这些组件是需要被缓存的，避免直接卸载
+      // 将KeepAlive组件内部需要缓存的组件的 vnode 上的 shapFlage 属性标记shouldKeepAlive，表示这些组件是需要被缓存的，避免直接卸载
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
