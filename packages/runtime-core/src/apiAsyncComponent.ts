@@ -43,7 +43,7 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
 // defineAsyncComponent 函数用于定义一个异步组件，接收一个异步组件加载器作为参数
 // 例如 source = ()=>import('xx.vue')
 export function defineAsyncComponent<
-  T extends Component = { new (): ComponentPublicInstance }
+  T extends Component = { new(): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
   // options 可以是配置项，也可以是加载器
   if (isFunction(source)) {
@@ -96,7 +96,7 @@ export function defineAsyncComponent<
             if (__DEV__ && !comp) {
               warn(
                 `Async component loader resolved to undefined. ` +
-                  `If you are using retry(), make sure to return its return value.`
+                `If you are using retry(), make sure to return its return value.`
               )
             }
             // interop module default
@@ -157,8 +157,8 @@ export function defineAsyncComponent<
             return () =>
               errorComponent
                 ? createVNode(errorComponent as ConcreteComponent, {
-                    error: err
-                  })
+                  error: err
+                })
                 : null
           })
       }
@@ -199,6 +199,18 @@ export function defineAsyncComponent<
           onError(err)
           error.value = err
         })
+
+      // 在这里，我们看到setup返回的是一个函数，因此render会被赋值为这个函数，render函数在异步组件的effect中执行的时候，
+      // 会访问loaded.value，这个过程实际上会和这个内置的异步组件的effect建立依赖关系，刚开始的时候由于异步组件的内容没有请求
+      // 完毕，会返回{ type: Text, children: 'loading' }，这是一个内部的组件，因此异步组件会渲染这个内部组件，但是当我们
+      // 请求的子组件的内容加载完毕之后，会设置InnerComp的值为子组件的内容，然后再设置loaded.value 为 true，loading的setter过
+      // 程会触发异步组件的effect重新执行，执行过程中会重新调用render函数，但是由于此时的loader.value已经为true了，因此会返
+      // 回 { type:InnderComp }，这个InndrComp存储的就是子组件返回的vnode，这就是整个异步组件渲染的全部过程。
+
+
+      // 大致的流程图就是
+      // App.vue -> 内置的异步组件（建立响应式），返回loading组件的vnode -> 渲染loading组件（子组件没有加载完毕的时候）-> 
+      // 子组件加载完毕（触发内置的异步组件的effect重新执行）-> 内置异步返回子组件的vnode -> 渲染子组件
 
       return () => {
         if (loaded.value && resolvedComp) {
