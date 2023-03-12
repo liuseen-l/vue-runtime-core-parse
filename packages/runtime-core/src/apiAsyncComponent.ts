@@ -61,11 +61,13 @@ export function defineAsyncComponent<
     onError: userOnError
   } = source
 
- 
+
   let pendingRequest: Promise<ConcreteComponent> | null = null
   let resolvedComp: ConcreteComponent | undefined
 
+  // 记录重试次数
   let retries = 0
+  // 重试函数
   const retry = () => {
     retries++
     pendingRequest = null
@@ -77,12 +79,15 @@ export function defineAsyncComponent<
     return (
       pendingRequest ||
       (thisRequest = pendingRequest =
+        // loader = () => import('xxx.vue'),import会返回一个promise，并作为loader函数调用的返回值
         loader()
           // 添加 catch 语句来捕获加载过程中的错误
           // 加载器加载过程中如果报错，在这里进行捕获
           .catch(err => {
             err = err instanceof Error ? err : new Error(String(err))
             if (userOnError) {
+              // 当错误发生时，返回一个新的 Promise 实例，并调用 onError 回调(也就是useOnError)，
+              // 同时将 retry 函数作为 onError 回调的参数
               return new Promise((resolve, reject) => {
                 const userRetry = () => resolve(retry())
                 const userFail = () => reject(err)
@@ -92,6 +97,7 @@ export function defineAsyncComponent<
               throw err
             }
           })
+          // comp 为 import('xxx.vue')加载的组件，
           .then((comp: any) => {
             if (thisRequest !== pendingRequest && pendingRequest) {
               return pendingRequest
@@ -170,9 +176,9 @@ export function defineAsyncComponent<
       const loaded = ref(false)
       // 定义 error，当错误发生时，用来存储错误对象
       const error = ref()
-       // 一个标志，代表是否正在加载,默认为 true
-       // 如果配置项中存在 delay，则开启一个定时器计时，当延迟到时后将 loading.value 设置为 false
-       // 如果配置项中没有 delay，则直接标记为加载中
+      // 一个标志，代表是否正在加载,默认为 true
+      // 如果配置项中存在 delay，则开启一个定时器计时，当延迟到时后将 loading.value 设置为 false
+      // 如果配置项中没有 delay，则直接标记为加载中
       const delayed = ref(!!delay)
 
       if (delay) {
