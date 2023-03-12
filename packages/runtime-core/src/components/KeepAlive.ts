@@ -331,12 +331,14 @@ const KeepAliveImpl: ComponentOptions = {
           setTransitionHooks(vnode, vnode.transition!)
         }
         // avoid vnode being mounted as fresh
-        // 将KeepAlive组件内部需要缓冲的组件的vnode 上的 shapFlage 属性标记keepAlive，表示这些组件是需要被缓冲的，避免渲染器重新挂载它
+        // 将KeepAlive组件内部需要缓存的组件的 vnode 上的 shapFlage 属性标记keepAlive，避免渲染器重新挂载它
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest
+        // 将这个重新渲染的缓存组件放到最后
         keys.delete(key)
         keys.add(key)
       } else {
+        // 如果没有被缓存过，则新增
         keys.add(key)
         // prune oldest entry
         if (max && keys.size > parseInt(max as string, 10)) {
@@ -344,6 +346,7 @@ const KeepAliveImpl: ComponentOptions = {
         }
       }
       // avoid vnode being unmounted
+      // 标记组件，表示这些组件是需要被缓存的，避免直接卸载
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
