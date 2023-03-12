@@ -97,7 +97,8 @@ export function defineAsyncComponent<
               throw err
             }
           })
-          // comp 为 import('xxx.vue')加载的组件，
+          // import('xxx.vue')返回的promise在这里会被捕获，其中comp是xxx.vue的vnode,在这里最后是将这个comp return出去了，由于是从then当中return出去的，因此会被Promise.resolve(comp)包裹一下，在setup函数
+          // 中会被再一次捕获
           .then((comp: any) => {
             if (thisRequest !== pendingRequest && pendingRequest) {
               return pendingRequest
