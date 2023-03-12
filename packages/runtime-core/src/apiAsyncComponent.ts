@@ -40,6 +40,8 @@ export interface AsyncComponentOptions<T = any> {
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
+// defineAsyncComponent 函数用于定义一个异步组件，接收一个异步组件加载器作为参数
+// 例如 source = ()=>import('xx.vue')
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -50,7 +52,7 @@ export function defineAsyncComponent<
   }
 
   const {
-    loader,
+    loader, // 加载器
     loadingComponent,
     errorComponent,
     delay = 200,
