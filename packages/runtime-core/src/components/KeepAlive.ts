@@ -323,7 +323,7 @@ const KeepAliveImpl: ComponentOptions = {
       if (cachedVNode) {
         // 如果有缓存的内容，则说明不应该执行挂载，而应该执行激活
         // 继承组件实例
-      
+
         vnode.el = cachedVNode.el // 处理普通元素，普通元素比如div这样的原生标签，它的真实dom是挂载vnode.el上
         vnode.component = cachedVNode.component // 处理组件，组件的实例时挂载vnode.component上
         if (vnode.transition) {
@@ -331,6 +331,7 @@ const KeepAliveImpl: ComponentOptions = {
           setTransitionHooks(vnode, vnode.transition!)
         }
         // avoid vnode being mounted as fresh
+        // 将KeepAlive组件内部需要缓冲的组件的vnode 上的 shapFlage 属性标记keepAlive，表示这些组件是需要被缓冲的，避免渲染器重新挂载它
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest
         keys.delete(key)
