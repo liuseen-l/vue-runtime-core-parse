@@ -324,8 +324,8 @@ const KeepAliveImpl: ComponentOptions = {
         // 如果有缓存的内容，则说明不应该执行挂载，而应该执行激活
         // 继承组件实例
 
-        vnode.el = cachedVNode.el // 处理普通元素，普通元素比如div这样的原生标签，它的真实dom是挂载vnode.el上
-        vnode.component = cachedVNode.component // 处理组件，组件的实例时挂载vnode.component上
+        vnode.el = cachedVNode.el // 处理普通元素，普通元素比如div这样的原生标签，它的真实dom是挂在vnode.el上
+        vnode.component = cachedVNode.component // 处理组件，组件的实例是挂在vnode.component上
         if (vnode.transition) {
           // recursively update transition hooks on subTree
           setTransitionHooks(vnode, vnode.transition!)
