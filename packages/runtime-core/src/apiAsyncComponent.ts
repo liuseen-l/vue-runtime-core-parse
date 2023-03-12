@@ -53,14 +53,15 @@ export function defineAsyncComponent<
 
   const {
     loader, // 加载器
-    loadingComponent, // 
-    errorComponent,
+    loadingComponent, // 加载组件
+    errorComponent, // 指定出错时要渲染的组件
     delay = 200,
-    timeout, // undefined = never times out
+    timeout, // 超时时长，其单位为 ms undefined = never times out
     suspensible = true,
     onError: userOnError
   } = source
 
+ 
   let pendingRequest: Promise<ConcreteComponent> | null = null
   let resolvedComp: ConcreteComponent | undefined
 
@@ -77,6 +78,8 @@ export function defineAsyncComponent<
       pendingRequest ||
       (thisRequest = pendingRequest =
         loader()
+          // 添加 catch 语句来捕获加载过程中的错误
+          // 加载器加载过程中如果报错，在这里进行捕获
           .catch(err => {
             err = err instanceof Error ? err : new Error(String(err))
             if (userOnError) {
@@ -165,7 +168,11 @@ export function defineAsyncComponent<
 
       // 异步组件是否加载成功
       const loaded = ref(false)
+      // 定义 error，当错误发生时，用来存储错误对象
       const error = ref()
+       // 一个标志，代表是否正在加载,默认为 true
+       // 如果配置项中存在 delay，则开启一个定时器计时，当延迟到时后将 loading.value 设置为 false
+       // 如果配置项中没有 delay，则直接标记为加载中
       const delayed = ref(!!delay)
 
       if (delay) {
@@ -174,8 +181,10 @@ export function defineAsyncComponent<
         }, delay)
       }
 
+      // 超时报错
       if (timeout != null) {
         setTimeout(() => {
+          // 超时后创建一个错误对象，并复制给 error.value
           if (!loaded.value && !error.value) {
             const err = new Error(
               `Async component timed out after ${timeout}ms.`
@@ -213,13 +222,16 @@ export function defineAsyncComponent<
       // 子组件加载完毕（触发内置的异步组件的effect重新执行）-> 内置异步返回子组件的vnode -> 渲染子组件
 
       return () => {
+        // 如果组件异步加载成功，则渲染被加载的组件
         if (loaded.value && resolvedComp) {
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
+          // 只有当错误存在且用户配置了 errorComponent 时才展示 Error 组件，同时将 error 作为 props 传递
           return createVNode(errorComponent as ConcreteComponent, {
             error: error.value
           })
         } else if (loadingComponent && !delayed.value) {
+          // 如果异步组件正在加载，并且用户指定了 Loading 组件，则渲染 Loading 组件
           return createVNode(loadingComponent as ConcreteComponent)
         }
       }
