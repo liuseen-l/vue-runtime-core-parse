@@ -303,6 +303,7 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       const key = vnode.key == null ? comp : vnode.key
+      // 在挂载时先获取缓存的组件 vnode
       const cachedVNode = cache.get(key)
 
       // clone vnode if it's reused because we are going to mutate it
@@ -320,9 +321,11 @@ const KeepAliveImpl: ComponentOptions = {
       pendingCacheKey = key
 
       if (cachedVNode) {
-        // copy over mounted state
-        vnode.el = cachedVNode.el
-        vnode.component = cachedVNode.component
+        // 如果有缓存的内容，则说明不应该执行挂载，而应该执行激活
+        // 继承组件实例
+      
+        vnode.el = cachedVNode.el // 处理普通元素，普通元素比如div这样的原生标签，它的真实dom是挂载vnode.el上
+        vnode.component = cachedVNode.component // 处理组件，组件的实例时挂载vnode.component上
         if (vnode.transition) {
           // recursively update transition hooks on subTree
           setTransitionHooks(vnode, vnode.transition!)
