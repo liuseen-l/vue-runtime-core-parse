@@ -53,7 +53,7 @@ export function defineAsyncComponent<
 
   const {
     loader, // 加载器
-    loadingComponent,
+    loadingComponent, // 
     errorComponent,
     delay = 200,
     timeout, // undefined = never times out
@@ -115,6 +115,7 @@ export function defineAsyncComponent<
     )
   }
 
+  // 返回一个组件，这里通过defineCompoent生成组件，实际上在script标签中引入其他的组件vue文件也会这样去包裹
   return defineComponent({
     name: 'AsyncComponentWrapper',
 
@@ -162,6 +163,7 @@ export function defineAsyncComponent<
           })
       }
 
+      // 异步组件是否加载成功
       const loaded = ref(false)
       const error = ref()
       const delayed = ref(!!delay)
