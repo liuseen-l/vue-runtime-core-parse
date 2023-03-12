@@ -93,6 +93,9 @@ const KeepAliveImpl: ComponentOptions = {
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
+
+    // 对于 KeepAlive 组件来说，它的实例上存在特殊的 keepAliveCtx 对象，该对象由渲染器注入
+    // 该对象会暴露渲染器的一些内部方法，其中 move 函数用来将一段 DOM 移动到另一个容器中
     const sharedContext = instance.ctx as KeepAliveContext
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
@@ -104,12 +107,15 @@ const KeepAliveImpl: ComponentOptions = {
       }
     }
 
+    // 创建一个缓存对象
+    // key: vnode.type
+    // value: vnode
     const cache: Cache = new Map()
     const keys: Keys = new Set()
     let current: VNode | null = null
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      ;(instance as any).__v_cache = cache
+      ; (instance as any).__v_cache = cache
     }
 
     const parentSuspense = instance.suspense
@@ -122,8 +128,12 @@ const KeepAliveImpl: ComponentOptions = {
         o: { createElement }
       }
     } = sharedContext
+
+    // 创建隐藏容器
     const storageContainer = createElement('div')
 
+    // KeepAlive 组件的实例上会被添加两个内部函数，分别是 deActivate和 activate
+    // 这两个函数会在渲染器中被调用
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
@@ -341,7 +351,7 @@ if (__COMPAT__) {
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = KeepAliveImpl as any as {
   __isKeepAlive: true
-  new (): {
+  new(): {
     $props: VNodeProps & KeepAliveProps
   }
 }

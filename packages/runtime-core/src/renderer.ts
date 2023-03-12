@@ -346,7 +346,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     // 因为在进行含key的节点更新的时候，也就是diff算法的时候，可能有新增的节点，需要进行挂载，而挂载的位置可能不是最后一个，比如第一个的时候，就需要anchor
     // 那么可能会想，更新的时候遇到新增的节点直接调用mountElement不就行了，为什么还要执行patch绕一圈呢？
     // 这是因为新增节点我们需要先判断新增节点的类型再来决定进行何种的挂载操作，而patch函数就是主要是这个功能
-    anchor = null, 
+    anchor = null,
     parentComponent = null,
     parentSuspense = null,
     isSVG = false,
@@ -441,8 +441,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             }
           ]
         }
-      */  
-      case Fragment: 
+      */
+      case Fragment:
         processFragment(
           n1,
           n2,
@@ -660,7 +660,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         slotScopeIds,
         optimized
       )
-    } 
+    }
     // 如果旧节点不为空，则进行更新操作
     else {
       patchElement(
@@ -831,7 +831,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       ) {
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
-      } 
+      }
       if (vnode === subTree) {
         const parentVNode = parentComponent.vnode
         setScopeId(
@@ -877,7 +877,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
   }
 
   // 更新普通标签元素
-  const patchElement = (     
+  const patchElement = (
     n1: VNode,
     n2: VNode,
     parentComponent: ComponentInternalInstance | null,
@@ -931,7 +931,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
         traverseStaticChildren(n1, n2)
       }
-    } 
+    }
     // 不优化，走diff算法
     else if (!optimized) {
       // 更新 children
@@ -1300,6 +1300,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     n2.slotScopeIds = slotScopeIds
     // 如果没有旧节点，代表是挂载组件
     if (n1 == null) {
+      // 如果是keep-alive组件，调用组件实例的ctx属性上的activate方法
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ; (parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1383,6 +1384,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
 
     // inject renderer internals for keepAlive
     if (isKeepAlive(initialVNode)) {
+      // 如果是keep-alive组件，为其实例身上的ctx属性注入renderer对象，此对象上暴露了渲染器的一些内部方法
       ; (instance.ctx as KeepAliveContext).renderer = internals
     }
 
@@ -1844,7 +1846,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     // 给新的vnode添加component属性，赋值为instance
     nextVNode.component = instance
     // instance身上的vnode存储的还是旧的vnode，因此可以通过它拿到之前的props,这个props是父组件传给子组件的props，不是子组件接受的props
-    const prevProps = instance.vnode.props 
+    const prevProps = instance.vnode.props
     // 将新的vnode换上去
     instance.vnode = nextVNode
     instance.next = null
@@ -1868,7 +1870,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     anchor,
     parentComponent,
     parentSuspense,
-    isSVG,  
+    isSVG,
     slotScopeIds,
     optimized = false
   ) => {
@@ -1986,8 +1988,8 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     const oldLength = c1.length // oldChildren.length
     const newLength = c2.length // newChildren.length
     const commonLength = Math.min(oldLength, newLength)
-    let i  
-    for (i = 0; i < commonLength; i++) {  
+    let i
+    for (i = 0; i < commonLength; i++) {
       // normalizeVNode 可以将一个子节点的字符串，比如 'xxx' 转换成 {type:Text,children:'xxx'}，便于后续比较，为什么要做这个操作呢，因为新的vnode可能没有格式化
       const nextChild = (c2[i] = optimized ? cloneIfMounted(c2[i] as VNode) : normalizeVNode(c2[i]))
       // const oldVNode = {
@@ -2106,7 +2108,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
       const n2 = (c2[e2] = optimized ? cloneIfMounted(c2[e2] as VNode) : normalizeVNode(c2[e2]))
-        // 如果节点类型一样就patch更新
+      // 如果节点类型一样就patch更新
       if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
@@ -2137,7 +2139,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     if (i > e1) {
       if (i <= e2) {
         // 获取到后面一个节点得索引，然后挂载到后面这个节点的前面
-        const nextPos = e2 + 1 
+        const nextPos = e2 + 1
         // 判断后面一个节点是否存在，存在就获取到后面一个节点的真实dom，不存在就以parentAnchor为锚点，默认为null,挂载的时候就相当于appendChild
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
         while (i <= e2) {
@@ -2146,7 +2148,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
             (c2[i] = optimized
               ? cloneIfMounted(c2[i] as VNode)
               : normalizeVNode(c2[i])),
-            container, 
+            container,
             anchor,
             parentComponent,
             parentSuspense,
@@ -2207,9 +2209,9 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       // 记录新的一组子节点中已处理的节点数
       let patched = 0
       // 记录需要更新的节点数，实际上就是经过预处理后，新子节点数组中剩余节点的数量
-      const toBePatched = e2 - s2 + 1 
+      const toBePatched = e2 - s2 + 1
       // 表示是否需要移动节点
-      let moved = false 
+      let moved = false
       // 初始值为 0，代表遍历旧的一组子节点的过程中遇到的最大索引值 k
       let maxNewIndexSoFar = 0
       //  source 数组将用来存储新的一组子节点中的节点在旧的一组子节点中的位置索引，后面将会使用它计算出一个最长递增子序列，并用于辅助完成 DOM 移动的操作
@@ -2247,11 +2249,11 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         // 如果旧节点不存在于新子节点数组中，那么卸载
         if (newIndex === undefined) {
           unmount(prevChild, parentComponent, parentSuspense, true)
-        } 
+        }
         // 如果旧节点存在于新子节点数组中
         else {
           // 存储新的一组子节点中的节点在旧的一组子节点中的位置索引
-          newIndexToOldIndexMap[newIndex - s2] = i + 1 
+          newIndexToOldIndexMap[newIndex - s2] = i + 1
           // 判断节点是否需要移动，和简单diff算法一样，通过最大索引来判断
           if (newIndex >= maxNewIndexSoFar) {
             maxNewIndexSoFar = newIndex
@@ -2291,7 +2293,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       // i = toBePatched - 1实际上就是source数组的最后一个元素的索引,这里从后往前遍历source
       for (i = toBePatched - 1; i >= 0; i--) {
         // 该节点在新 children 中的真实位置索引
-        const nextIndex = s2 + i 
+        const nextIndex = s2 + i
         // 获取该节点
         const nextChild = c2[nextIndex] as VNode
         // 获取锚点，锚点是当前节点的后一个节点
@@ -2351,7 +2353,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
 
     // 因为Fragment本身并不属于某一个实际的节点，而是对一组节点的描述，因此需要移动的是他的子节点，就和挂载一样，挂载的也是它的子节点，而不是Fragment节点本身
-    if (type === Fragment) { 
+    if (type === Fragment) {
       hostInsert(el!, container, anchor)
       for (let i = 0; i < (children as VNode[]).length; i++) {
         move((children as VNode[])[i], container, anchor, moveType)
@@ -2371,7 +2373,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
       moveType !== MoveType.REORDER &&
       shapeFlag & ShapeFlags.ELEMENT &&
       transition
-      // 判断需要过渡不，没有就直接移动了
+    // 判断需要过渡不，没有就直接移动了
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
@@ -2422,6 +2424,7 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // 如果是keep-alive组件，调用组件实例的ctx属性上的deactivate方法
       ; (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return
     }
