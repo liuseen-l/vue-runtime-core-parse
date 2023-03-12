@@ -87,7 +87,9 @@ const KeepAliveImpl: ComponentOptions = {
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
+    // 当前 KeepAlive 组件的实例
     const instance = getCurrentInstance()!
+
     // KeepAlive communicates with the instantiated renderer via the
     // ctx where the renderer passes in its internals,
     // and the KeepAlive instance exposes activate/deactivate implementations.
@@ -259,6 +261,7 @@ const KeepAliveImpl: ComponentOptions = {
         return null
       }
 
+      // KeepAlive 的默认插槽就是要被 KeepAlive 的组件
       const children = slots.default()
       const rawVNode = children[0]
       if (children.length > 1) {
@@ -266,16 +269,18 @@ const KeepAliveImpl: ComponentOptions = {
           warn(`KeepAlive should contain exactly one component child.`)
         }
         current = null
-        return children
+        return children // 调用插槽返回的是一个vnode数组，而render函数调用的返回值需要是一个vnode对象，因此这里内部实际上会做一些处理，如果 childrend.length > 1,就取出第一个vnode
       } else if (
         !isVNode(rawVNode) ||
         (!(rawVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
           !(rawVNode.shapeFlag & ShapeFlags.SUSPENSE))
       ) {
+        // 如果不是组件，直接渲染即可，因为非组件的虚拟节点无法被 KeepAlive
         current = null
         return rawVNode
       }
 
+      // 生成 keep-alive 的 vnode
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
 
