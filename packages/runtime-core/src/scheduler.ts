@@ -78,14 +78,15 @@ export function nextTick<T = void>(
           </button>
         </template>
 
+    #  resolvedPromise = Promise.resolve()
     先改值，是 resolvedPromise.then(watch).then(nextTick)
     
-    先nextTick是resolvedPromise.then(nextTick)
+    先nextTick是 resolvedPromise.then(nextTick)
                 resolvedPromise.then(watch)
    * 
    *  */
   const p = currentFlushPromise || resolvedPromise
-  // 直接返回 p 是支持 await nextTick()
+  // 直接返回 p 是支持 await nextTick(),相当于 await Promise.resolve()
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
