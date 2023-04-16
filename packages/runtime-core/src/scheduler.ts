@@ -85,6 +85,7 @@ export function nextTick<T = void>(
    * 
    *  */
   const p = currentFlushPromise || resolvedPromise
+  // 直接返回 p 是支持 await nextTick()
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 

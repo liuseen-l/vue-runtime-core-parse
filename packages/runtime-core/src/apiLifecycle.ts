@@ -100,7 +100,7 @@ export function injectHook(
 
 // 返回一个函数 
 export const createHook = <T extends Function = () => any>(lifecycle: LifecycleHooks) => { // hook就是用户传入的生命钩子回调
-  // 这个函数实际上就是用户调用的函数，比如更新函数onBeforeUnmount()的调用，实际上就是调用的如下的函数
+  // 这个函数实际上就是用户调用的函数，比如更新函数onBeforeUnmount()的调用，实际上就是调用的如下的函数·
   return (hook: T, target: ComponentInternalInstance | null = currentInstance) => {
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     return (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) && injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
