@@ -124,7 +124,7 @@ export function queueJob(job: SchedulerJob) {
     } else {
       // 组件更新触发的该函数和watch flush = pre | post 都走这里，插入之前，需要调整顺序，确保缓存队列中id的顺序是递增的，在调整的过程会发现，组件的更新job会排在在watch的job的前面
       // watch.id = update.id = instance.id
-      // 按照job.id自增的顺序排列 0 1 2 3 4 5
+      // 按照job.id自增的顺序排列 0 1 2 3 4
       queue.splice(findInsertionIndex(job.id), 0, job)
     }
     queueFlush()
@@ -136,8 +136,8 @@ function queueFlush() {
   if (!isFlushing && !isFlushPending) {
   // 将该标志设置为 true 以避免重复刷新
     isFlushPending = true
-    // 这里充分说明了组件更新的update回调函数，以及wacth flush = pre 和 post的回调函数都是在所有响应式数据更新完毕之后再进行的，这些数据更新是同步的，而缓存队列由于是微任务，所以
-    // 组件更新的update回调函数， 以及 watch flush = pre 和 post 的回调都是最后同步任务执行完毕再执行的异步任务
+    // 这里充分说明了组件更新的effect，以及wacth flush = pre 和 post的回调函数都是在所有响应式数据更新完毕之后再进行的，这些数据更新是同步的，而缓存队列由于是微任务，所以
+    // 组件更新的effect 以及 watch flush = pre 和 post 的回调都是最后同步任务执行完毕再执行的异步任务
     currentFlushPromise = resolvedPromise.then(flushJobs) // 相当于 Promise.resolve().then(function)
   }
 }
