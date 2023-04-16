@@ -88,24 +88,25 @@ export function injectHook(
     const apiName = toHandlerKey(ErrorTypeStrings[type].replace(/ hook$/, ''))
     warn(
       `${apiName} is called when there is no active component instance to be ` +
-        `associated with. ` +
-        `Lifecycle injection APIs can only be used during execution of setup().` +
-        (__FEATURE_SUSPENSE__
-          ? ` If you are using async setup(), make sure to register lifecycle ` +
-            `hooks before the first await statement.`
-          : ``)
+      `associated with. ` +
+      `Lifecycle injection APIs can only be used during execution of setup().` +
+      (__FEATURE_SUSPENSE__
+        ? ` If you are using async setup(), make sure to register lifecycle ` +
+        `hooks before the first await statement.`
+        : ``)
     )
   }
 }
 
 // 返回一个函数 
-export const createHook =
-  <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
-  // hook就是用户传入的生命钩子回调
-  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+export const createHook = <T extends Function = () => any>(lifecycle: LifecycleHooks) => { // hook就是用户传入的生命钩子回调
+  // 这个函数实际上就是用户调用的函数，比如更新函数onBeforeUnmount()的调用，实际上就是调用的如下的函数
+  return (hook: T, target: ComponentInternalInstance | null = currentInstance) => {
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
-    (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-    injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+    return (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) && injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+  }
+}
+
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
