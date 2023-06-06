@@ -280,7 +280,8 @@ const KeepAliveImpl: ComponentOptions = {
         return rawVNode
       }
 
-      let vnode = getInnerChild(rawVNode) // 大部分场景下可以理解为返回rawVNode本身
+      let vnode = getInnerChild(rawVNode) // 大部分场景下可以理解为返回 rawVNode 本身
+      // 获取vnode.type
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded
