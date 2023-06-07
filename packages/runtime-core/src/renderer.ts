@@ -1754,7 +1754,6 @@ function baseCreateRenderer(options: RendererOptions, createHydrationFns?: typeo
         if (u) {
           // 这里没有直接执行onUpdate钩子函数，而是调用queuePostRenderEffect函数，内部会调用queuePostFlushCb函数，而该函数会执行pendingPostFlushCbs.push(cb);
           // pendingPostFlushCbs这个数组不仅用来存储onUpdate钩子的回调，还用于存储watch flush = post的回调，这个数组的flush操作，将会在try{}finally{ 这里flush }
-          // 而此时代码执行到这里的时候，我们实际上还在try{当中,try执行组件effect然后间接执行onBeforeUpdate}，因此不能像onBeforeUpdate钩子函数一样在这里就执行了
           queuePostRenderEffect(u, parentSuspense)
         }
         // onVnodeUpdated
